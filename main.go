@@ -9,17 +9,33 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func iferr(err error) {
-	if err != nil {
-		log.Println(err)
-	}
-}
-
 var (
 	TOKEN   string
 	APP_KEY string
 	session *discordgo.Session
 )
+
+type Command struct {
+	handler func(s *discordgo.Session, i *discordgo.InteractionCreate)
+	opts    discordgo.ApplicationCommand
+}
+
+var commands = map[string]Command{
+	"test": {
+		opts: discordgo.ApplicationCommand{
+			Name:        "Test",
+			Description: "Test a simple bot command",
+		},
+		handler: func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Hey there! Congratulations, you just executed your first slash command",
+				},
+			})
+		},
+	},
+}
 
 func init() {
 	log.Println("loading env vars...")
