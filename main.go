@@ -17,13 +17,13 @@ var (
 
 type Command struct {
 	handler func(s *discordgo.Session, i *discordgo.InteractionCreate)
-	opts    discordgo.ApplicationCommand
+	opts    *discordgo.ApplicationCommand
 }
 
 var commands = map[string]Command{
 	"test": {
-		opts: discordgo.ApplicationCommand{
-			Name:        "Test",
+		opts: &discordgo.ApplicationCommand{
+			Name:        "test",
 			Description: "Test a simple bot command",
 		},
 		handler: func(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -53,23 +53,18 @@ func init() {
 }
 
 func main() {
-	_, err := session.ApplicationCommandBulkOverwrite(APP_KEY, "", []*discordgo.ApplicationCommand{
-		{
-			Name:        "test",
-			Description: "Showcase of a basic slash command",
-		},
-	})
-	if err != nil {
-		log.Fatalf("Couldn't register commands: %v", err)
+	for name := range commands {
+		opts := commands[name].opts
+		_, err := session.ApplicationCommandBulkOverwrite(APP_KEY, "", []*discordgo.ApplicationCommand{opts})
+		if err != nil {
+			log.Fatalf("couldnt register command '%v': %v", name, err)
+		}
 	}
 	{
 		session.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "Hey there! Congratulations, you just executed your first slash command",
-				},
-			})
+			if cmd, ok := commands[i.ApplicationCommandData().Name]; ok {
+				cmd.handler(s, i)
+			}
 		})
 
 		session.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
