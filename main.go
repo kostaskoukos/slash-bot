@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -69,6 +70,46 @@ var commands = map[string]Command{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Content: meme.Url,
+				},
+			})
+		},
+	},
+	"joke": {
+		opts: &discordgo.ApplicationCommand{
+			Name:        "joke",
+			Description: "Sends a random joke",
+		},
+		handler: func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			res, err := http.Get("https://v2.jokeapi.dev/joke/Any")
+			if err != nil {
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "An error occured...",
+					},
+				})
+			}
+			data, _ := io.ReadAll(res.Body)
+
+			var joke struct {
+				Type     string `json:"type"`
+				Joke     string `json:"joke"`
+				Setup    string `json:"setup"`
+				Delivery string `json:"delivery"`
+			}
+			json.Unmarshal(data, &joke)
+
+			content := ""
+			if joke.Type == "single" {
+				content = joke.Joke
+			} else {
+				content = fmt.Sprintf("%v\n\n%v", joke.Setup, joke.Delivery)
+			}
+
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: content,
 				},
 			})
 		},
