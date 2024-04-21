@@ -12,6 +12,11 @@ import (
 	"github.com/joho/godotenv"
 )
 
+func prettyPrint(i interface{}) string {
+	s, _ := json.MarshalIndent(i, "", "\t")
+	return string(s)
+}
+
 var (
 	TOKEN   string
 	APP_KEY string
