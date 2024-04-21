@@ -91,12 +91,16 @@ func init() {
 }
 
 func main() {
+	data := make([]*discordgo.ApplicationCommand, 0, len(commands))
 	for name := range commands {
 		opts := commands[name].opts
-		_, err := session.ApplicationCommandBulkOverwrite(APP_KEY, "", []*discordgo.ApplicationCommand{opts})
-		if err != nil {
-			log.Fatalf("couldnt register command '%v': %v", name, err)
-		}
+		log.Println(prettyPrint(*opts))
+		data = append(data, opts)
+	}
+
+	_, err := session.ApplicationCommandBulkOverwrite(APP_KEY, "", data)
+	if err != nil {
+		log.Fatalf("Couldn't register commands: %v", err)
 	}
 	{
 		session.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
