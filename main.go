@@ -1,7 +1,10 @@
 package main
 
 import (
+	"encoding/json"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 
@@ -31,6 +34,37 @@ var commands = map[string]Command{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Content: "Hey there! Congratulations, you just executed your first slash command",
+				},
+			})
+		},
+	},
+	"meme": {
+		opts: &discordgo.ApplicationCommand{
+			Name:        "meme",
+			Description: "Sends a random meme from reddit",
+		},
+		handler: func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			res, err := http.Get("https://meme-api.com/gimme")
+			if err != nil {
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "An error occured...",
+					},
+				})
+			}
+			data, _ := io.ReadAll(res.Body)
+
+			type Meme struct {
+				Url string `json:"url"`
+			}
+			var meme Meme
+			json.Unmarshal(data, &meme)
+
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: meme.Url,
 				},
 			})
 		},
