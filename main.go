@@ -55,10 +55,9 @@ var commands = map[string]Command{
 			}
 			data, _ := io.ReadAll(res.Body)
 
-			type Meme struct {
+			var meme struct {
 				Url string `json:"url"`
 			}
-			var meme Meme
 			json.Unmarshal(data, &meme)
 
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
