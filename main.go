@@ -30,16 +30,16 @@ type Command struct {
 }
 
 var commands = map[string]Command{
-	"test": {
+	"hey": {
 		opts: &discordgo.ApplicationCommand{
-			Name:        "test",
-			Description: "Test a simple bot command",
+			Name:        "hey",
+			Description: "Greets the user",
 		},
 		handler: func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: "Hey there! Congratulations, you just executed your first slash command",
+					Content: "Γειά σου μαύρε!",
 				},
 			})
 		},
@@ -55,7 +55,7 @@ var commands = map[string]Command{
 				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
-						Content: "An error occured...",
+						Content: "Είμαι πολύ μαύρος για αυτήν την εντολή... Ξαναδοκίμασε!",
 					},
 				})
 			}
@@ -85,7 +85,7 @@ var commands = map[string]Command{
 				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
-						Content: "An error occured...",
+						Content: "Είμαι πολύ μαύρος για αυτήν την εντολή... Ξαναδοκίμασε!",
 					},
 				})
 			}
