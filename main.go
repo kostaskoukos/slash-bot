@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/Pauloo27/searchtube"
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 )
@@ -110,6 +111,45 @@ var commands = map[string]Command{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Content: content,
+				},
+			})
+		},
+	},
+	"dl": {
+		opts: &discordgo.ApplicationCommand{
+			Name:        "dl",
+			Description: "Downloads (from YT) and sends an audio file with the song specified",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "song_name",
+					Description: "The name of the song you want do download",
+					Required:    true,
+				},
+			},
+		},
+		handler: func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			res, err_s := searchtube.Search(i.ApplicationCommandData().Options[0].StringValue(), 1)
+			if err_s != nil {
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "Είμαι πολύ μαύρος για αυτήν την εντολή... Ξαναδοκίμασε!",
+					},
+				})
+			}
+			if len(res) == 0 {
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "Δεν μπόρεσα να βρω αυτό το τραγούδι",
+					},
+				})
+			}
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: fmt.Sprintf("Your song is %v. Duration: %v. %v", res[0].Title, res[0].RawDuration, res[0].Thumbnail),
 				},
 			})
 		},
