@@ -39,7 +39,6 @@ var commands = map[string]Command{
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: "Γειά σου μαύρε!",
 					Content: "Γεια σου μαύρε!",
 				},
 			})
