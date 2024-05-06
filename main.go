@@ -253,5 +253,6 @@ func main() {
 		<-stop
 	}
 
+	os.Remove("audio.mp3")
 	log.Println("closing")
 }
