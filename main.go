@@ -12,6 +12,7 @@ import (
 	"github.com/Pauloo27/searchtube"
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
+	"github.com/kkdai/youtube/v2"
 )
 
 func prettyPrint(i interface{}) string {
@@ -129,29 +130,70 @@ var commands = map[string]Command{
 			},
 		},
 		handler: func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			})
 			res, err_s := searchtube.Search(i.ApplicationCommandData().Options[0].StringValue(), 1)
 			if err_s != nil {
-				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "Είμαι πολύ μαύρος για αυτήν την εντολή... Ξαναδοκίμασε!",
-					},
+				s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+					Content: "Είμαι πολύ μαύρος για αυτή την εντολή... Ξαναδοκίμασε!",
 				})
 			}
 			if len(res) == 0 {
-				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "Δεν μπόρεσα να βρω αυτό το τραγούδι",
-					},
+				s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+					Content: "Δεν βρήκα",
+				})
+				return
+			}
+			vid := res[0]
+			log.Println(prettyPrint(vid))
+			fail := func() {
+				s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+					Content: "Den katevasa",
 				})
 			}
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: fmt.Sprintf("Your song is %v. Duration: %v. %v", res[0].Title, res[0].RawDuration, res[0].Thumbnail),
+			client := youtube.Client{}
+			video, err0 := client.GetVideo(vid.ID)
+			if err0 != nil {
+				fail()
+			}
+
+			stream, _, err1 := client.GetStream(video, &video.Formats.Itag(140)[0])
+			if err1 != nil {
+				fail()
+			}
+			defer stream.Close()
+
+			file, err2 := os.Create("audio.mp3")
+			if err2 != nil {
+				fail()
+			}
+			defer file.Close()
+
+			_, err3 := io.Copy(file, stream)
+			if err3 != nil {
+				fail()
+			}
+
+			r, err_r := os.Open("audio.mp3")
+			if err_r != nil {
+				fail()
+			}
+			defer r.Close()
+
+			_, err_i := s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+				Content: fmt.Sprintf("Your song is %v. Duration: %v. %v", vid.Title, vid.RawDuration, vid.Thumbnail),
+				Files: []*discordgo.File{
+					{
+						Name:        vid.Title + ".mp3",
+						ContentType: "audio/mp3",
+						Reader:      r,
+					},
 				},
 			})
+			if err_i != nil {
+				fail()
+			}
 		},
 	},
 }
