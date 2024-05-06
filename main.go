@@ -20,6 +20,10 @@ func prettyPrint(i interface{}) string {
 	return string(s)
 }
 
+func respond(s *discordgo.Session, i *discordgo.Interaction, opts *discordgo.WebhookParams) (*discordgo.Message, error) {
+	return s.FollowupMessageCreate(i, true, opts)
+}
+
 var (
 	TOKEN   string
 	APP_KEY string
@@ -135,21 +139,21 @@ var commands = map[string]Command{
 			})
 			res, err_s := searchtube.Search(i.ApplicationCommandData().Options[0].StringValue(), 1)
 			if err_s != nil {
-				s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+				respond(s, i.Interaction, &discordgo.WebhookParams{
 					Content: "Είμαι πολύ μαύρος για αυτή την εντολή... Ξαναδοκίμασε!",
 				})
 			}
 			if len(res) == 0 {
-				s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-					Content: "Δεν βρήκα",
+				respond(s, i.Interaction, &discordgo.WebhookParams{
+					Content: "Δεν μπόρεσα να βρω το τραγούδι... Ξαναδοκίμασε!",
 				})
 				return
 			}
 			vid := res[0]
 			log.Println(prettyPrint(vid))
 			fail := func() {
-				s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-					Content: "Den katevasa",
+				respond(s, i.Interaction, &discordgo.WebhookParams{
+					Content: "Δεν μπόρεσα να κατεβάσω το τραγούδι... Ξαναδοκίμασε!",
 				})
 			}
 			client := youtube.Client{}
@@ -181,7 +185,7 @@ var commands = map[string]Command{
 			}
 			defer r.Close()
 
-			_, err_i := s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+			_, err_i := respond(s, i.Interaction, &discordgo.WebhookParams{
 				Content: fmt.Sprintf("Your song is %v. Duration: %v. %v", vid.Title, vid.RawDuration, vid.Thumbnail),
 				Files: []*discordgo.File{
 					{
