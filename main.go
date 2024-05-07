@@ -200,6 +200,37 @@ var commands = map[string]Command{
 			}
 		},
 	},
+	"play": {
+		opts: &discordgo.ApplicationCommand{
+			Name:        "play",
+			Description: "Plays the specified song in the voice channel the user is in",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "song_name",
+					Description: "The name of the song you want to play",
+					Required:    true,
+				},
+			},
+		},
+		handler: func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			})
+			_, err := s.ChannelVoiceJoin(i.GuildID, i.ChannelID, false, true)
+			if err != nil {
+				log.Println(err)
+				respond(s, i.Interaction, &discordgo.WebhookParams{
+					Content: "Δεν μπόρεσα να μπω στο voice channel... Ξαναδοκίμασε!",
+				})
+				return
+			}
+
+			respond(s, i.Interaction, &discordgo.WebhookParams{
+				Content: "mphka",
+			})
+		},
+	},
 }
 
 func init() {
