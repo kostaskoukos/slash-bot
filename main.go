@@ -10,6 +10,7 @@ import (
 	"os/signal"
 
 	"github.com/Pauloo27/searchtube"
+	"github.com/bwmarrin/dgvoice"
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 	"github.com/kkdai/youtube/v2"
@@ -22,6 +23,49 @@ func prettyPrint(i interface{}) string {
 
 func respond(s *discordgo.Session, i *discordgo.Interaction, opts *discordgo.WebhookParams) (*discordgo.Message, error) {
 	return s.FollowupMessageCreate(i, true, opts)
+}
+
+func fail(s *discordgo.Session, i *discordgo.Interaction, msg string) {
+	respond(s, i, &discordgo.WebhookParams{
+		Content: msg,
+	})
+}
+
+func downloadSong(song string, s *discordgo.Session, i *discordgo.Interaction, filename string) *searchtube.SearchResult {
+	res, err_s := searchtube.Search(song, 1)
+	log.Println("[downloadSong]: found " + song)
+	if err_s != nil {
+		fail(s, i, "Είμαι πολύ μαύρος για αυτή την εντολή... Ξαναδοκίμασε!")
+	}
+	if len(res) == 0 {
+		fail(s, i, "Δεν μπόρεσα να βρω το τραγούδι... Ξαναδοκίμασε!")
+	}
+	vid := res[0]
+	client := youtube.Client{}
+	video, err0 := client.GetVideo(vid.ID)
+	if err0 != nil {
+		fail(s, i, "Δεν μπόρεσα να κατεβάσω το τραγούδι... Ξαναδοκίμασε!")
+	}
+
+	stream, _, err1 := client.GetStream(video, &video.Formats.Itag(140)[0])
+	log.Println("[downloadSong]: found stream")
+	if err1 != nil {
+		fail(s, i, "Δεν μπόρεσα να κατεβάσω το τραγούδι... Ξαναδοκίμασε!")
+	}
+	defer stream.Close()
+
+	file, err2 := os.Create(filename)
+	if err2 != nil {
+		fail(s, i, "Δεν μπόρεσα να κατεβάσω το τραγούδι... Ξαναδοκίμασε!")
+	}
+	defer file.Close()
+
+	_, err3 := io.Copy(file, stream)
+	log.Println("[downloadSong]: copying stream...")
+	if err3 != nil {
+		fail(s, i, "Δεν μπόρεσα να κατεβάσω το τραγούδι... Ξαναδοκίμασε!")
+	}
+	return vid
 }
 
 var (
@@ -137,51 +181,11 @@ var commands = map[string]Command{
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 			})
-			res, err_s := searchtube.Search(i.ApplicationCommandData().Options[0].StringValue(), 1)
-			if err_s != nil {
-				respond(s, i.Interaction, &discordgo.WebhookParams{
-					Content: "Είμαι πολύ μαύρος για αυτή την εντολή... Ξαναδοκίμασε!",
-				})
-			}
-			if len(res) == 0 {
-				respond(s, i.Interaction, &discordgo.WebhookParams{
-					Content: "Δεν μπόρεσα να βρω το τραγούδι... Ξαναδοκίμασε!",
-				})
-				return
-			}
-			vid := res[0]
-			log.Println(prettyPrint(vid))
-			fail := func() {
-				respond(s, i.Interaction, &discordgo.WebhookParams{
-					Content: "Δεν μπόρεσα να κατεβάσω το τραγούδι... Ξαναδοκίμασε!",
-				})
-			}
-			client := youtube.Client{}
-			video, err0 := client.GetVideo(vid.ID)
-			if err0 != nil {
-				fail()
-			}
-
-			stream, _, err1 := client.GetStream(video, &video.Formats.Itag(140)[0])
-			if err1 != nil {
-				fail()
-			}
-			defer stream.Close()
-
-			file, err2 := os.Create("audio.mp3")
-			if err2 != nil {
-				fail()
-			}
-			defer file.Close()
-
-			_, err3 := io.Copy(file, stream)
-			if err3 != nil {
-				fail()
-			}
+			vid := downloadSong(i.ApplicationCommandData().Options[0].StringValue(), s, i.Interaction, "audio.mp3")
 
 			r, err_r := os.Open("audio.mp3")
 			if err_r != nil {
-				fail()
+				fail(s, i.Interaction, "Δεν μπόρεσα να κατεβάσω το τραγούδι... Ξαναδοκίμασε!")
 			}
 			defer r.Close()
 
@@ -196,7 +200,7 @@ var commands = map[string]Command{
 				},
 			})
 			if err_i != nil {
-				fail()
+				fail(s, i.Interaction, "Δεν μπόρεσα να κατεβάσω το τραγούδι... Ξαναδοκίμασε!")
 			}
 		},
 	},
@@ -217,7 +221,16 @@ var commands = map[string]Command{
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 			})
-			_, err := s.ChannelVoiceJoin(i.GuildID, i.ChannelID, false, true)
+
+			disconnect := func() {
+				connection, ok := s.VoiceConnections[i.GuildID]
+				if ok {
+					connection.Disconnect()
+				}
+			}
+			disconnect()
+
+			conn, err := s.ChannelVoiceJoin(i.GuildID, i.ChannelID, false, true)
 			if err != nil {
 				log.Println(err)
 				respond(s, i.Interaction, &discordgo.WebhookParams{
@@ -225,10 +238,18 @@ var commands = map[string]Command{
 				})
 				return
 			}
+			vid := downloadSong(i.ApplicationCommandData().Options[0].StringValue(), s, i.Interaction, "voice.mp3")
 
 			respond(s, i.Interaction, &discordgo.WebhookParams{
-				Content: "mphka",
+				Content: fmt.Sprintf("Now Playing: %v. Duration: %v. %v", vid.Title, vid.RawDuration, vid.Thumbnail),
 			})
+			dgvoice.PlayAudioFile(conn, "voice.mp3", make(chan bool))
+
+			respond(s, i.Interaction, &discordgo.WebhookParams{
+				Content: "Βγαίνω από το voice channel",
+			})
+
+			disconnect()
 		},
 	},
 }
@@ -285,5 +306,6 @@ func main() {
 	}
 
 	os.Remove("audio.mp3")
+	os.Remove("voice.mp3")
 	log.Println("closing")
 }
