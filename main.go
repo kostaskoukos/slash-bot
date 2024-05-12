@@ -33,7 +33,6 @@ func fail(s *discordgo.Session, i *discordgo.Interaction, msg string) {
 
 func downloadSong(song string, s *discordgo.Session, i *discordgo.Interaction, filename string) *searchtube.SearchResult {
 	res, err_s := searchtube.Search(song, 1)
-	log.Println("[downloadSong]: found " + song)
 	if err_s != nil {
 		fail(s, i, "Είμαι πολύ μαύρος για αυτή την εντολή... Ξαναδοκίμασε!")
 	}
@@ -48,7 +47,6 @@ func downloadSong(song string, s *discordgo.Session, i *discordgo.Interaction, f
 	}
 
 	stream, _, err1 := client.GetStream(video, &video.Formats.Itag(140)[0])
-	log.Println("[downloadSong]: found stream")
 	if err1 != nil {
 		fail(s, i, "Δεν μπόρεσα να κατεβάσω το τραγούδι... Ξαναδοκίμασε!")
 	}
@@ -61,7 +59,6 @@ func downloadSong(song string, s *discordgo.Session, i *discordgo.Interaction, f
 	defer file.Close()
 
 	_, err3 := io.Copy(file, stream)
-	log.Println("[downloadSong]: copying stream...")
 	if err3 != nil {
 		fail(s, i, "Δεν μπόρεσα να κατεβάσω το τραγούδι... Ξαναδοκίμασε!")
 	}
