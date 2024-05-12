@@ -97,13 +97,13 @@ var commands = map[string]Command{
 			Description: "Sends a random meme from reddit",
 		},
 		handler: func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			})
 			res, err := http.Get("https://meme-api.com/gimme")
 			if err != nil {
-				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "Είμαι πολύ μαύρος για αυτήν την εντολή... Ξαναδοκίμασε!",
-					},
+				respond(s, i.Interaction, &discordgo.WebhookParams{
+					Content: "Είμαι πολύ μαύρος για αυτήν την εντολή... Ξαναδοκίμασε!",
 				})
 			}
 			data, _ := io.ReadAll(res.Body)
@@ -113,11 +113,8 @@ var commands = map[string]Command{
 			}
 			json.Unmarshal(data, &meme)
 
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: meme.Url,
-				},
+			respond(s, i.Interaction, &discordgo.WebhookParams{
+				Content: meme.Url,
 			})
 		},
 	},
@@ -127,13 +124,13 @@ var commands = map[string]Command{
 			Description: "Sends a random joke",
 		},
 		handler: func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			})
 			res, err := http.Get("https://v2.jokeapi.dev/joke/Any")
 			if err != nil {
-				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "Είμαι πολύ μαύρος για αυτήν την εντολή... Ξαναδοκίμασε!",
-					},
+				respond(s, i.Interaction, &discordgo.WebhookParams{
+					Content: "Είμαι πολύ μαύρος για αυτήν την εντολή... Ξαναδοκίμασε!",
 				})
 			}
 			data, _ := io.ReadAll(res.Body)
@@ -153,11 +150,8 @@ var commands = map[string]Command{
 				content = fmt.Sprintf("%v\n\n%v", joke.Setup, joke.Delivery)
 			}
 
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: content,
-				},
+			respond(s, i.Interaction, &discordgo.WebhookParams{
+				Content: content,
 			})
 		},
 	},
