@@ -242,6 +242,17 @@ var commands = map[string]Command{
 
 			respond(s, i.Interaction, &discordgo.WebhookParams{
 				Content: fmt.Sprintf("Now Playing: %v. Duration: %v. %v", vid.Title, vid.RawDuration, vid.Thumbnail),
+				Components: []discordgo.MessageComponent{
+					discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{
+							discordgo.Button{
+								Label:    "Stop",
+								Style:    discordgo.DangerButton,
+								CustomID: "stop",
+							},
+						},
+					},
+				},
 			})
 			dgvoice.PlayAudioFile(conn, "voice.mp3", make(chan bool))
 
@@ -283,8 +294,27 @@ func main() {
 	}
 	{
 		session.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			if cmd, ok := commands[i.ApplicationCommandData().Name]; ok {
-				cmd.handler(s, i)
+			switch i.Type {
+			case discordgo.InteractionApplicationCommand:
+				if cmd, ok := commands[i.ApplicationCommandData().Name]; ok {
+					cmd.handler(s, i)
+				}
+			case discordgo.InteractionMessageComponent:
+				if i.MessageComponentData().CustomID != "stop" {
+					return
+				}
+				connection, ok := s.VoiceConnections[i.GuildID]
+				if !ok {
+					return
+				}
+
+				connection.Disconnect()
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "Βγαίνω από το voice channel",
+					},
+				})
 			}
 		})
 
