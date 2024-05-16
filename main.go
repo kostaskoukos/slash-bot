@@ -221,6 +221,13 @@ var commands = map[string]Command{
 			}
 			disconnect()
 
+			channel, _ := s.Channel(i.ChannelID)
+			if channel.Type != discordgo.ChannelTypeGuildVoice {
+				respond(s, i.Interaction, &discordgo.WebhookParams{
+					Content: "Χρησιμποίησε αυτή την εντολή μέσα στο chat ενός voice channel ρε μαύρε",
+				})
+				return
+			}
 			conn, err := s.ChannelVoiceJoin(i.GuildID, i.ChannelID, false, true)
 			if err != nil {
 				log.Println(err)
